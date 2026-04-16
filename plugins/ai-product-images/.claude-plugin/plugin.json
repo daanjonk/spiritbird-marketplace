@@ -1,6 +1,6 @@
 {
   "name": "ai-product-images",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Generate AI product images (studio shots, UGC-style, model+product) and upload them directly to Shopify products. Powered by Kie AI MCP and Shopify CLI. No custom scripts or API keys needed.",
   "author": {
     "name": "Daan Jonkman — SpiritBird"

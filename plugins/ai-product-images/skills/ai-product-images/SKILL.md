@@ -1,6 +1,6 @@
 ---
 name: ai-product-images
-description: Generate AI product images and upload them to Shopify products. Uses Kie AI for image generation (SeeDream 5 Lite, Flux 2 Pro) and the Cloudinary MCP for sourcing product reference photos. For existing Shopify products, uses the product's existing Shopify CDN images as reference; for new products, sources reference images from Cloudinary. Use this skill whenever the user wants to create product photos, generate product images, add images to Shopify products, replace product photos, create studio-style product shots, create UGC-style content, or says things like "generate images for my products", "create product photos", "add AI images to Shopify", "make product pictures", "studio shots for products", "UGC images", "mirror selfie shots", "lifestyle product photos", or any variation of wanting AI-generated imagery for Shopify products. Also trigger when the user mentions product images in combination with Kie AI, Cloudinary, or Shopify.
+description: Generate AI product images and upload them to Shopify products. Uses Kie AI for image generation (SeeDream 5 Lite, Flux 2 Pro) and Shopify Files for hosting product reference photos. For existing Shopify products, uses the product's existing CDN images as reference; for new products, uploads local files directly to Shopify Files. Use this skill whenever the user wants to create product photos, generate product images, add images to Shopify products, replace product photos, create studio-style product shots, create UGC-style content, or says things like "generate images for my products", "create product photos", "add AI images to Shopify", "make product pictures", "studio shots for products", "UGC images", "mirror selfie shots", "lifestyle product photos", or any variation of wanting AI-generated imagery for Shopify products. Also trigger when the user mentions product images in combination with Kie AI or Shopify.
 ---
 
 # AI Product Image Generator for Shopify
@@ -21,23 +21,18 @@ shopify store auth --store <your-store>.myshopify.com --scopes read_products,wri
 
 This stores credentials securely — no custom apps, API keys, or config files needed. Ask the user for their store domain at the start of the flow if not already known.
 
-### 2. Cloudinary MCP (product reference images)
+### 2. Kie AI MCP (image generation)
 
-The [Cloudinary MCP connector](https://www.cloudinary.com/) must be installed in the Claude environment. Product reference images are stored in a Cloudinary folder (default: `"Shopify product images"`).
+The Kie AI MCP connector must be installed in the Claude environment. No API key needed in config — the MCP handles authentication.
 
 ### 3. Model Reference Images (optional — for model+product shots)
 
 If you want AI-generated photos of a model wearing/holding your products:
 
-1. Upload 2-3 photos of your model to Shopify Files (Settings → Files)
-2. Copy the permanent CDN URLs
-3. Keep these URLs handy — you'll provide them when using Mode A
+1. Upload 2-3 photos of your model to Shopify Files (Settings → Files), or drop them in the chat and Claude will upload them
+2. Save the permanent CDN URLs — you'll provide them when using Mode A
 
 These URLs should be permanent Shopify CDN links (e.g., `https://cdn.shopify.com/s/files/...`). Leave empty if you only need product-on-white-background shots.
-
-### 4. Kie AI MCP (image generation)
-
-The Kie AI MCP connector must be installed in the Claude environment. No API key needed in config — the MCP handles authentication.
 
 ---
 
@@ -58,7 +53,7 @@ Always prefer Mode A when model references are configured and the product is wea
 
 The generated image must be 100% identical to the provided input image — same color, same fabric, same pattern, same design. AI image models will always drift on color, shade, and texture when working from text descriptions alone. The only reliable way to prevent this is to include the actual product photo as a reference image in every Kie AI call.
 
-**The rule: if a product photo exists (in Cloudinary, provided by user, or already on Shopify), it MUST be included as a reference image in the Kie AI call. Never generate from text description alone when a photo is available.**
+**The rule: if a product photo exists (provided by user, already on Shopify, or as a local file), it MUST be included as a reference image in the Kie AI call. Never generate from text description alone when a photo is available.**
 
 Why this matters: without the real photo as a visual anchor, the AI interprets "beige" as whatever shade it imagines. The result looks plausible but doesn't match the actual product — and that's unacceptable for ecommerce where customers expect to receive exactly what they see.
 
@@ -66,12 +61,14 @@ Why this matters: without the real photo as a visual anchor, the AI interprets "
 
 Kie AI requires publicly accessible image URLs. Before generating anything, make sure you have a URL for the product photo.
 
-**Which route to use depends on whether the product already exists on Shopify:**
+**Which route to use:**
 
-- **Product already exists on Shopify** → Start with Route A (Shopify images). The product likely already has photos on its CDN — use those as the reference.
-- **New product (not yet on Shopify)** → Start with Route B (Cloudinary). The reference images live in the Cloudinary product images folder.
+- **Product already exists on Shopify with images** → **Route A** — use existing CDN URLs directly
+- **User provides a local file, drops an image in chat, or points to a file on their computer** → **Route B** — upload to Shopify Files to get a permanent CDN URL
+- **User provides a public URL** (e.g., from a website) → use `fileCreate` with `originalSource` directly (simplified Route B — skip staged upload)
+- **No image available at all** → **Mode C fallback** — text-to-image with a warning
 
-**Route A — Product already exists on Shopify (preferred for existing products):**
+**Route A — Product already exists on Shopify (use existing CDN images):**
 
 Use the Shopify CLI to retrieve the product's existing image CDN URLs:
 ```bash
@@ -80,53 +77,76 @@ shopify store execute --store <store>.myshopify.com --query 'query ($id: ID!) { 
 
 The response includes image URLs hosted on Shopify's CDN (`cdn.shopify.com`). These are permanent, public, and immediately usable — pass them directly to Kie AI. Pick the clearest/most representative image as the reference.
 
-If the existing product has no images, fall through to Route B (Cloudinary) or Route C (user-provided).
+If the existing product has no images, fall through to Route B.
 
-**Route B — Product image is in Cloudinary (preferred for new products):**
+**Route B — Upload a local file to Shopify Files (for new products or user-provided images):**
 
-Search the product images folder in Cloudinary (default folder: `"Shopify product images"`):
+This is a 4-step process that takes ~10 seconds total:
 
-```
-mcp__Cloudinary_Asset_Management__search-assets({
-  "request": {
-    "expression": "folder:\"Shopify product images\"",
-    "max_results": 50,
-    "with_field": ["context", "tags"]
-  }
-})
-```
+**Step 1: Get file info and create a staged upload target**
 
-Each result includes a `secure_url` — that's your permanent public HTTPS URL. Match the product by `display_name` (which corresponds to the product name) or `filename`. Pass the `secure_url` directly to Kie AI.
+```bash
+# Get the file size first
+stat -f%z "<local_file_path>"
 
-To find a specific product image by name:
-```
-mcp__Cloudinary_Asset_Management__search-assets({
-  "request": {
-    "expression": "folder:\"Shopify product images\" AND display_name:\"<product name>\"",
-    "max_results": 5
-  }
-})
+# Create staged upload target
+shopify store execute --store <store>.myshopify.com --allow-mutations \
+  --query 'mutation stagedUploadsCreate($input: [StagedUploadInput!]!) { stagedUploadsCreate(input: $input) { stagedTargets { url resourceUrl parameters { name value } } userErrors { field message } } }' \
+  --variables '{"input": [{"resource": "FILE", "filename": "<filename.ext>", "mimeType": "<mime_type>", "fileSize": "<size_in_bytes>", "httpMethod": "POST"}]}'
 ```
 
-The `secure_url` from the response is immediately usable — no shared links, no expiry, no cleanup.
+Common MIME types: `image/webp`, `image/jpeg`, `image/png`, `image/gif`.
 
-**Route C — User provides a file or image inline:**
-Upload it to Cloudinary first so you have a permanent URL:
+**Step 2: Upload the file to the staged URL**
 
+Use `curl` with the parameters returned from Step 1. Build a multipart form POST with each parameter as a form field, and the file as the last field:
+
+```bash
+curl -s -X POST "<staged_url>" \
+  -F 'Content-Type=<mime_type>' \
+  -F 'success_action_status=201' \
+  -F 'acl=private' \
+  -F 'key=<key_value>' \
+  -F 'x-goog-date=<date_value>' \
+  -F 'x-goog-credential=<credential_value>' \
+  -F 'x-goog-algorithm=<algorithm_value>' \
+  -F 'x-goog-signature=<signature_value>' \
+  -F 'policy=<policy_value>' \
+  -F "file=@<local_file_path>"
 ```
-mcp__Cloudinary_Asset_Management__upload-asset({
-  "upload_request": {
-    "file": "<url-or-base64>",
-    "asset_folder": "Shopify product images",
-    "display_name": "<product name>",
-    "use_filename_as_display_name": false
-  }
-})
+
+All parameter names and values come directly from the `parameters` array in Step 1. Include every parameter exactly as returned. The file field must be last. Expect HTTP 201 on success.
+
+**Step 3: Create the file in Shopify using the resourceUrl**
+
+```bash
+shopify store execute --store <store>.myshopify.com --allow-mutations \
+  --query 'mutation fileCreate($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id alt createdAt fileStatus } userErrors { field message } } }' \
+  --variables '{"files": [{"alt": "<product name>", "contentType": "IMAGE", "originalSource": "<resourceUrl_from_step1>"}]}'
 ```
 
-The response includes `secure_url` — use that for the Kie AI call. This also stores the image in the product images folder for future use.
+**Step 4: Poll for the permanent CDN URL** (file processing takes ~5 seconds)
 
-If the image only exists inline in the conversation (no file path, no URL), ask the user to re-upload as a file attachment so you can use Route C. If that's not possible, use text-to-image as fallback — but explicitly warn: "I don't have the product photo as a file, so colors and details may not match exactly."
+```bash
+shopify store execute --store <store>.myshopify.com \
+  --query 'query { node(id: "<file_gid_from_step3>") { ... on MediaImage { id image { url width height } fileStatus } } }'
+```
+
+Wait 5 seconds before first poll. If `fileStatus` is `READY` and `image.url` is present, you have your permanent CDN URL. If still `UPLOADED` or `PROCESSING`, wait 3 more seconds and poll again (max 5 polls).
+
+**Result:** A permanent `https://cdn.shopify.com/...` URL ready for Kie AI.
+
+**Route B (simplified) — User provides a public URL:**
+
+If the user provides an image that's already publicly accessible (e.g., from a website), skip the staged upload and use `fileCreate` directly:
+
+```bash
+shopify store execute --store <store>.myshopify.com --allow-mutations \
+  --query 'mutation fileCreate($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id alt createdAt fileStatus } userErrors { field message } } }' \
+  --variables '{"files": [{"alt": "<product name>", "contentType": "IMAGE", "originalSource": "<public_url>"}]}'
+```
+
+Then poll for the CDN URL as in Step 4 above.
 
 Never silently fall back to text-only generation. Always inform the user when you can't use their product photo as reference.
 
@@ -137,7 +157,7 @@ When combining model references with a product image, the product image always g
 image_urls = [
     MODEL_REF_1,   # model angle 1
     MODEL_REF_2,   # model angle 2
-    "<PRODUCT_IMAGE_URL>"  # actual product photo (Shopify CDN or Cloudinary) — ALWAYS LAST
+    "<PRODUCT_IMAGE_URL>"  # actual product photo (Shopify CDN) — ALWAYS LAST
 ]
 ```
 
@@ -169,12 +189,12 @@ Model reference URLs:
 
 These must be permanently hosted on Shopify CDN (they won't expire). They show the same model from different angles.
 
-### How to update model reference images
+### How to upload/update model reference images
 
-If the user wants to change the model:
-1. Upload new model photos to Shopify Files (Settings → Files in the admin, or via the Shopify CLI with `fileCreate` mutation)
-2. Get the permanent CDN URLs from Shopify
-3. Provide the new URLs when using the skill
+If the user wants to add or change model reference images:
+1. The user drops the model photos in the chat or points to local files
+2. Upload them to Shopify Files using the Route B staged upload flow (see Step 0)
+3. Save the permanent CDN URLs for use in Mode A
 
 Ideal model reference set: 2-3 images showing the model from different angles, with clear face visibility. The more angles, the better the consistency.
 
@@ -189,8 +209,8 @@ Ideal model reference set: 2-3 images showing the model from different angles, w
    → Before generating anything, ask the user: "Should I upload images as draft or publish them live?"
    → This is the ONLY question to ask upfront. After this, proceed without interruption.
 3. Get Product Reference Image
-   → Existing product: use Shopify CDN image URLs from get-product
-   → New product: search Cloudinary product images folder → get secure_url
+   → Existing product with images: use Shopify CDN URLs directly (Route A)
+   → New product / user provides file: upload to Shopify Files → get CDN URL (Route B)
 4. Choose Mode
    → Mode A: Model+Product if model refs exist and product is wearable
    → Mode B: Image-to-image if product has existing photos but isn't wearable
@@ -239,45 +259,17 @@ shopify store execute --store <store>.myshopify.com --query 'query ($id: ID!) { 
 
 ## Phase 1.5: Get Product Reference Image
 
-Before generating, you need a reference image URL. The source depends on whether the product already exists on Shopify (see Step 0 for the full routing logic).
+Before generating, you need a reference image URL. See Step 0 for the full routing logic.
 
 ### For existing Shopify products (Route A)
 
-You already retrieved the product in Phase 1 via `get-product`. Use the image CDN URLs from that response — no extra step needed. Pick the clearest/most representative image.
+You already retrieved the product in Phase 1. Use the image CDN URLs from that response — no extra step needed. Pick the clearest/most representative image.
 
-### For new products without Shopify images (Route B — Cloudinary)
+### For new products or user-provided images (Route B)
 
-Search the product images folder in Cloudinary:
+The user drops an image in the chat, points to a file on their computer (Downloads folder, workspace, etc.), or provides a URL. Follow the Route B staged upload flow from Step 0 to get a permanent Shopify CDN URL.
 
-```
-mcp__Cloudinary_Asset_Management__search-assets({
-  "request": {
-    "expression": "folder:\"Shopify product images\"",
-    "max_results": 50,
-    "with_field": ["context", "tags"]
-  }
-})
-```
-
-Each result has:
-- `display_name` — the human-readable product name (e.g. "Bali Blue Set")
-- `secure_url` — the permanent public HTTPS URL to pass to Kie AI
-- `width`, `height` — image dimensions
-- `format` — file format (jpg, png, etc.)
-
-### Find a specific product image in Cloudinary
-
-Search by display name to match against a product:
-```
-mcp__Cloudinary_Asset_Management__search-assets({
-  "request": {
-    "expression": "folder:\"Shopify product images\" AND display_name:\"<product name>\"",
-    "max_results": 5
-  }
-})
-```
-
-If there's no matching image in Cloudinary and the Shopify product has no images either, fall back to Mode C (text-to-image) with a warning to the user.
+If there's no image available at all, fall back to Mode C (text-to-image) with a warning to the user.
 
 ---
 
@@ -289,7 +281,7 @@ This is the primary mode for apparel, accessories, and anything a model can wear
 
 #### Step 1: Prepare the image URLs array
 
-You MUST have a product image URL at this point (Cloudinary `secure_url` or Shopify CDN URL — see Step 0). If you don't, stop and get one first.
+You MUST have a product image URL at this point (Shopify CDN URL from Route A or B — see Step 0). If you don't, stop and get one first.
 
 Pass the model references first, then the product image last:
 
@@ -297,7 +289,7 @@ Pass the model references first, then the product image last:
 image_urls = [
     "<model_ref_1>",          # model angle 1 (Shopify CDN URL)
     "<model_ref_2>",          # model angle 2 (Shopify CDN URL)
-    "<product_image_url>"     # the actual product (Shopify CDN or Cloudinary) — REQUIRED, ALWAYS LAST
+    "<product_image_url>"     # the actual product (Shopify CDN) — REQUIRED, ALWAYS LAST
 ]
 ```
 
@@ -513,13 +505,13 @@ Here's why this matters: each generation is independent. If you fire off two gen
 ```python
 # Image 1 (standard)
 image_urls_1 = [
-    *MODEL_REFS,
+    "<model_ref_1>", "<model_ref_2>",
     "<product_image_url>"  # original product photo
 ]
 
 # Image 2 (uses image 1 as additional reference)
 image_urls_2 = [
-    MODEL_REFS[0], MODEL_REFS[1],
+    "<model_ref_1>", "<model_ref_2>",
     "<image_1_output_url>",     # completed first image — for consistency
     "<product_image_url>"       # original product photo — still LAST
 ]
@@ -557,40 +549,32 @@ The upload logic depends on whether this is a **new product** or an **existing p
 
 When creating a product from scratch, image order matters — position 1 is what customers see first on the storefront and in collection grids.
 
-The rule: **the original product photo (from Cloudinary) always goes in position 1. The AI-generated model shot goes in position 2.**
+The rule: **the original product photo always goes in position 1. The AI-generated model shot goes in position 2.**
 
 This gives customers an accurate flat/studio reference image first, with the model shot immediately after to show the product in context. It's the standard ecommerce convention and ensures the thumbnail in collection listings shows the actual product.
 
-**Step 1: Upload the original Cloudinary product photo as position 1**
+**Step 1: Upload the original product photo**
 
-```bash
-shopify store execute --store <store>.myshopify.com --allow-mutations \
-  --query 'mutation fileCreate($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id alt ... on MediaImage { image { url } } } userErrors { field message } } }' \
-  --variables '{"files": [{"alt": "<product name> - product photo", "contentType": "IMAGE", "originalSource": "<product_image_url>"}]}'
-```
-
-Then add it to the product using `productSet` or by creating the product with the image included.
-
-The Cloudinary `secure_url` is permanent — Shopify will fetch and store the image on its own CDN.
+If the original product photo was uploaded to Shopify Files via Route B, it already has a CDN URL. Use `fileCreate` to associate it with the product, or include it when creating the product via `productSet`.
 
 **Step 2: Upload the AI-generated model image**
 
 ```bash
 shopify store execute --store <store>.myshopify.com --allow-mutations \
   --query 'mutation fileCreate($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id alt ... on MediaImage { image { url } } } userErrors { field message } } }' \
-  --variables '{"files": [{"alt": "<product name> - model shot", "contentType": "IMAGE", "originalSource": "<approved_model_image_url>"}]}'
+  --variables '{"files": [{"alt": "<product name> - model shot", "contentType": "IMAGE", "originalSource": "<kie_ai_output_url>"}]}'
 ```
 
-If the user wants to generate more than one model shot for a new product, continue uploading them — but always keep the original Cloudinary photo first.
+If the user wants to generate more than one model shot for a new product, continue uploading them — but always keep the original product photo first.
 
 ### Existing product: append new image(s) only
 
-When a product already exists on Shopify and already has images, do **not** reorder or replace existing images. Just upload the new AI-generated image(s) to Shopify Files and associate them:
+When a product already exists on Shopify and already has images, do **not** reorder or replace existing images. Just upload the new AI-generated image(s) to Shopify Files:
 
 ```bash
 shopify store execute --store <store>.myshopify.com --allow-mutations \
   --query 'mutation fileCreate($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id alt ... on MediaImage { image { url } } } userErrors { field message } } }' \
-  --variables '{"files": [{"alt": "<product name> - model shot", "contentType": "IMAGE", "originalSource": "<approved_image_url>"}]}'
+  --variables '{"files": [{"alt": "<product name> - model shot", "contentType": "IMAGE", "originalSource": "<kie_ai_output_url>"}]}'
 ```
 
 If the user explicitly asks to reorder images, do that — but never reorder silently without their input, as changing image order affects the storefront.
@@ -605,16 +589,15 @@ Show the user: product store URL, admin URL, and image details.
 
 When processing multiple products:
 
-1. Get auth token once at the start
-2. Ask the user once: **draft or live?** (see Phase 3)
-3. List all target products
-4. For each product:
-   - Find the product image in Cloudinary (search by display_name)
+1. Ask the user once: **draft or live?** (see Phase 3)
+2. List all target products
+3. For each product:
+   - Get the product reference image (Route A for existing products, Route B for new ones with user-provided files)
    - Choose mode (model+product for wearables, image-to-image for others)
    - Generate → upload → move to the next product (no review gate per image)
    - If multiple images per product: generate sequentially, chaining each completed image as reference for the next (see "Multi-Image Consistency")
-5. You CAN run generation for **different products** in parallel (they don't share styling). But multiple images for the **same product** must be sequential.
-6. Show a summary at the end with all product URLs and image counts
+4. You CAN run generation for **different products** in parallel (they don't share styling). But multiple images for the **same product** must be sequential.
+5. Show a summary at the end with all product URLs and image counts
 
 No per-image approval needed — the user made their draft/live choice upfront. They can review everything in Shopify admin afterwards and ask for regeneration if needed.
 
@@ -622,42 +605,26 @@ No per-image approval needed — the user made their draft/live choice upfront. 
 
 ## Image Hosting
 
-### Product reference images → Cloudinary
+All images are hosted on **Shopify Files** (CDN). This keeps everything in one place — no third-party dependencies.
 
-Product photos used as references for AI generation are stored in your Cloudinary product images folder (default: `"Shopify product images"`). Benefits:
-- Permanent public `secure_url` — no shared links or token expiry to manage
-- Instant availability — no processing delay
+### Product reference images → Shopify Files
+Product photos used as references for AI generation are uploaded to Shopify Files via the staged upload flow. Benefits:
+- Permanent public CDN URL (`cdn.shopify.com/...`)
+- No token expiry or shared links to manage
 - Fast global CDN delivery
-- Searchable by name, tags, and metadata via the Cloudinary MCP
-- Images can be uploaded via URL, file path, or base64
+- Managed directly through Shopify admin (Settings → Files)
 
 ### Model reference images → Shopify Files
+The store's model reference photos are also hosted on Shopify Files. These rarely change and have permanent URLs provided by the user at setup.
 
-The store's model reference photos are hosted on Shopify Files (CDN). These rarely change and have permanent URLs provided by the user at setup.
+### AI-generated images → Shopify Files
+After generation, Kie AI provides a temporary URL. Upload to Shopify Files promptly before it expires:
 
-### AI-generated images → Upload to Shopify product
-
-After generation, Kie AI provides a temporary URL. Upload to the Shopify product promptly before it expires.
-
-If you need to permanently host an AI-generated image outside of a product (e.g., for reuse), upload it to Shopify Files:
 ```bash
 shopify store execute --store <store>.myshopify.com --allow-mutations \
   --query 'mutation fileCreate($files: [FileCreateInput!]!) { fileCreate(files: $files) { files { id alt ... on MediaImage { image { url } } } userErrors { field message } } }' \
   --variables '{"files": [{"alt": "Description of the image", "contentType": "IMAGE", "originalSource": "<kie_ai_image_url>"}]}'
 ```
-
----
-
-## Cloudinary MCP Reference
-
-The Cloudinary MCP tools used in this skill:
-
-| Tool | Purpose |
-|------|---------|
-| `search-assets` | Find product images by folder and display name. Returns `secure_url`. |
-| `get-asset-details` | Get full details for a specific image by asset ID. |
-| `upload-asset` | Upload new product photos to the product images folder. |
-| `search-folders` | Verify the folder exists or find folders by name. |
 
 ---
 
@@ -667,21 +634,21 @@ The Cloudinary MCP tools used in this skill:
 |-------------|---------|-------|
 | **Shopify CLI** | Product listing, image upload, file management | `shopify store auth --store <store>.myshopify.com --scopes read_products,write_products,write_files` |
 | **Kie AI MCP** | AI image generation (SeeDream, Flux) | Connect in Claude Code MCP settings |
-| **Cloudinary MCP** | Product reference image storage & retrieval | Connect in Claude Code MCP settings |
 
-No custom apps, API keys, or config files needed. The Shopify CLI and MCP servers handle all authentication.
+That's it — just two dependencies. No Cloudinary, no custom apps, no API keys in config files.
 
 ---
 
 ## Error Handling
 
 - **Shopify CLI not authenticated**: Ask the user to run `shopify store auth --store <store>.myshopify.com --scopes read_products,write_products,write_files`
+- **Staged upload access denied**: Re-run `shopify store auth` with `write_files` scope included
+- **Staged upload curl fails**: Check that all parameters from `stagedUploadsCreate` are included exactly as returned. The file field must be last in the curl command.
+- **File processing stuck**: If `fileStatus` is still `PROCESSING` after 5 polls (~25 seconds), the file may be corrupted or too large. Ask the user to try a different image.
 - **Product not found**: Double-check the product ID (must be in `gid://shopify/Product/<id>` format). Use the list products query to find the right one.
 - **Image upload fails**: Verify the image URL is publicly accessible. Kie AI URLs are temporary — upload promptly after generation.
 - **Kie AI generation fails**: Retry with a simplified prompt. If persistent, try a different model.
 - **Kie AI URL expired**: If too much time passes between generation and upload, the URL may expire. Regenerate the image.
-- **Cloudinary image not found**: Check that the display_name matches. Try a broader search without the name filter to see all images in the folder.
-- **Cloudinary MCP not connected**: The user needs to connect the Cloudinary connector in their Claude environment settings.
 - **Model looks inconsistent**: Try using only 2 reference images instead of 3, or try different reference angles. Simpler prompts work better.
 - **Product looks distorted in model shot**: Simplify the prompt. Focus on "wearing this exact [product]" and keep other instructions minimal.
 - **Network errors**: Retry once, then inform the user.

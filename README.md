@@ -96,7 +96,7 @@ No technical setup needed — just provide your credentials and Claude handles t
 |--------|----------|------------|
 | **shopify-brain** | Shopify CLI | [Shopify CLI](https://shopify.dev/docs/api/shopify-cli) |
 | **shopify-blog-publisher** | Shopify CLI, DataForSEO MCP, Kie AI MCP | [DataForSEO](https://dataforseo.com), [Kie AI](https://kie.ai/api-key) |
-| **ai-product-images** | Shopify CLI, Kie AI MCP, Cloudinary MCP | [Kie AI](https://kie.ai/api-key), [Cloudinary](https://cloudinary.com) |
+| **ai-product-images** | Shopify CLI, Kie AI MCP | [Kie AI](https://kie.ai/api-key) |
 | **dataforseo** | DataForSEO account | [DataForSEO](https://dataforseo.com) |
 | **kie-ai** | Kie AI API key | [Kie AI](https://kie.ai/api-key) |
 
