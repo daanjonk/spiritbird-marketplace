@@ -1,230 +1,258 @@
 ---
 name: shopify-blog-publisher
-description: End-to-end Shopify blog article publisher. Handles keyword research (DataForSEO), blog writing, featured image generation (Kie AI), and publishing to Shopify — all in one flow. Use this skill whenever the user wants to publish a blog post to their Shopify store, write a blog article for Shopify, do keyword research for a blog, or says things like "publish a blog", "new blog post", "write an article for the shop", "blog for Shopify", "create a blog post", or any variation of wanting to research, write, and publish blog content to their Shopify webshop.
+description: End-to-end Shopify blog article publisher. Takes a blog idea from ideation through keyword research, competitive SERP analysis, SEO-optimized writing, AI image generation, and publishing to Shopify — all in one production-ready flow. Use this skill whenever the user wants to publish a blog post to their Shopify store, write a blog article for Shopify, do keyword research for a blog, or says things like "publish a blog", "new blog post", "write an article for the shop", "blog for Shopify", "create a blog post", "SEO blog", "write content for the store", or any variation of wanting to research, write, and publish blog content to their Shopify webshop. Also trigger when the user asks about blog SEO, content strategy for Shopify, or optimizing blog posts for search.
 ---
 
 # Shopify Blog Publisher
 
-Publishes a complete, SEO-optimized blog article to a Shopify store in one flow: keyword research, writing, image generation, and publishing.
-
-## Prerequisites
-
-Before using this skill, you need:
-
-1. **Shopify store** with a Custom App that has `write_content` scope (see README.md)
-2. **DataForSEO account** for keyword research (https://dataforseo.com)
-3. **Kie AI MCP** installed in your Claude workspace for image generation
-
-Set your credentials as environment variables — see the `.env.example` file included in this skill.
+Publishes a production-ready, SEO-optimized blog article to a Shopify store in one flow: idea → research → outline → write → image → publish.
 
 ## The Flow
 
 ```
-1. Keyword Research (DataForSEO)
-   → Find the right topic angle and keywords
-2. Blog Writing
-   → Write the article optimized for the researched keywords
-3. Image Generation (Kie AI)
-   → Create a featured image for the post
-4. Publish to Shopify
-   → Push the finished article live on the store
+Phase 0: Ideation, Context & Autonomy Level
+Phase 1: Keyword Research (DataForSEO MCP)
+Phase 2: SERP & Competitive Analysis
+Phase 2b: AI Optimization (optional — user opts in at Phase 0)
+Phase 3: Outline & Structure
+Phase 4: Blog Writing (Brand-Aligned)
+Phase 5: Image Generation (Kie AI)
+Phase 6: Publish to Shopify
 ```
 
-Each phase builds on the previous one. Don't skip phases unless the user explicitly says to.
+Each phase builds on the previous. Don't skip phases unless the user explicitly says to. At each phase transition, read the relevant reference file for detailed instructions.
 
 ---
 
-## Phase 1: Keyword Research (DataForSEO)
+## Phase 0: Ideation, Context & Autonomy Level
 
-Use the `scripts/dataforseo.py` script for all DataForSEO API calls. The script handles auth and response parsing.
+This is the entry point. Before any API calls, understand what we're building, why, and how much control the user wants.
 
-### Step 1: Get the seed keyword from the user
+**Step 1 — Get the idea.** The user provides a topic, product, or content idea. If vague, ask one focused follow-up.
 
-Ask the user for a topic or seed keyword. If they've already provided one, use it.
+**Step 2 — Ask three key questions (present all at once using AskUserQuestion):**
 
-### Step 2: Run keyword suggestions
+Question 1 — **Goal:** "What's the goal for this blog post?"
+- Traffic (high-volume keywords) · Conversion (commercial intent) · Education (informational) · Product launch (weave product in)
 
-```bash
-python3 <skill-path>/scripts/dataforseo.py suggestions "<seed_keyword>" --location <location_code> --language <language_code> --limit 20
-```
+Question 2 — **Optimization scope:** "SEO only, or also AI search optimization?"
+- SEO only (~$0.07 API cost) — keyword research + SERP analysis
+- SEO + AI (~$0.18 API cost) — adds LLM mentions analysis
 
-This returns keyword suggestions with search volume, CPC, and competition.
+Question 3 — **Autonomy level:** "How hands-on do you want to be?"
 
-Default: location 2840 (United States), language en (English). Override per request — e.g., Netherlands = 2528 / nl, UK = 2826 / en, Germany = 2276 / de.
+Present these as numbered options:
+1. **Full autopilot** — I research, write, generate the image, and save as draft. You only review the final draft in Shopify.
+2. **Outline check + final review** — I pause after the outline for your approval, then write + generate image + publish as draft. You review the final post before it goes live.
+3. **Full control** — I pause after the outline, after the written article, and after the image. You approve each step before I continue.
 
-### Step 3: Run search volume for promising keywords
+These autonomy levels control which phases require user confirmation:
 
-Pick the 5-10 most relevant keywords from suggestions and get precise search volume:
+| Phase | Level 1 (Autopilot) | Level 2 (Outline + Final) | Level 3 (Full control) |
+|-------|-------------------|-------------------------|---------------------|
+| Keyword selection | Auto-pick best | Auto-pick best | Pause for approval |
+| Outline | Auto-approve | **Pause for approval** | **Pause for approval** |
+| Written article | Auto-approve | **Pause for approval** | **Pause for approval** |
+| Image | Auto-approve | Auto-approve | **Pause for approval** |
+| Publish | Save as draft | Save as draft | User chooses draft/live |
 
-```bash
-python3 <skill-path>/scripts/dataforseo.py volume "<keyword1>,<keyword2>,<keyword3>" --location <location_code> --language <language_code>
-```
+At level 1, the entire flow runs end-to-end and saves as a draft for the user to review in Shopify admin. At level 3, nothing moves forward without explicit approval. Level 2 is the sweet spot for most users — it catches structural issues early (outline) and lets them review the final product, but doesn't slow down the middle.
 
-### Step 4: Run related keywords for additional angles
+Store all three answers — they gate which API calls happen, how content is structured, and where the flow pauses.
 
-```bash
-python3 <skill-path>/scripts/dataforseo.py related "<seed_keyword>" --location <location_code> --language <language_code> --limit 10
-```
-
-### Step 5: Present findings to the user
-
-Show a clean summary table:
-
-| Keyword | Search Volume | Competition | CPC |
-|---------|--------------|-------------|-----|
-
-Recommend a primary keyword and 3-5 secondary keywords. Explain why — search volume, competition level, and relevance to their store. Let the user confirm or adjust before moving to writing.
-
----
-
-## Phase 2: Blog Writing
-
-Write the blog article optimized for the chosen keywords. The user may have specific blog preferences configured — check with them if this is the first run.
-
-### Default blog structure (if no preferences set yet):
-
-1. **Title** — Include primary keyword, keep under 70 characters
-2. **Meta description** — 150-160 characters, includes primary keyword
-3. **Introduction** — Hook the reader, introduce the topic, mention primary keyword naturally
-4. **H2 sections** (3-5) — Each addresses a subtopic, weave in secondary keywords
-5. **Conclusion** — Summarize key points, include a CTA
-6. **Tags** — Relevant tags based on keywords and topic
-
-### SEO guidelines:
-
-- Primary keyword in title, first paragraph, and at least 2 H2 headings
-- Secondary keywords distributed naturally throughout
-- Use internal linking placeholders: `[INTERNAL LINK: related product/collection]`
-- Keep paragraphs short (2-3 sentences)
-- Include alt text suggestions for images
-- Aim for 800-1500 words depending on topic complexity
-
-### Output format:
-
-Present the complete article to the user in a clean format. Include:
-- Suggested title
-- Meta description
-- Full article body (HTML-ready)
-- Suggested tags
-
-Wait for the user to approve or request changes before proceeding.
+**Step 3 — Load brand context.** Read these from the Shopify Brain vault:
+- `Brand/tone-of-voice.md` — writing style and rules
+- `Brand/icp.md` — who we write for
+- `Brand/customer-voice.md` — real customer language to weave in
 
 ---
 
-## Phase 3: Image Generation (Kie AI)
+## Phase 1: Keyword Research
 
-Generate a featured image using the `mcp__kie-ai__generate_nano_banana` tool.
+Read `references/keyword-research.md` for all DataForSEO MCP tool calls, interpretation guidance, and keyword selection strategy.
 
-### Step 1: Craft the image prompt
-
-Based on the blog topic and content, create a descriptive image prompt. Consider:
-- The blog's main theme and mood
-- Brand style (if defined — check with user)
-- What would look good as a blog header/featured image
-
-### Step 2: Generate the image
-
-Use the MCP tool:
-```
-mcp__kie-ai__generate_nano_banana(prompt="<your detailed image prompt>")
-```
-
-This returns a task_id. Poll for completion:
-```
-mcp__kie-ai__get_task_status(task_id="<task_id>")
-```
-
-Poll every 5-10 seconds until the status is complete. The result will contain an image URL.
-
-### Step 3: Present to user
-
-Show the generated image and ask if they're happy with it. Offer to regenerate with a different prompt if needed.
+**Summary:** Use the DataForSEO MCP tools directly (suggestions, ideas, related keywords) → filter by difficulty and intent aligned with the user's goal → present a table with 1 primary + 3-5 secondary keywords → get user confirmation (unless autonomy level 1 or 2, in which case auto-select and log the reasoning).
 
 ---
 
-## Phase 4: Publish to Shopify
+## Phase 2: SERP & Competitive Analysis
 
-Use the `scripts/shopify.py` script for Shopify API calls. It handles OAuth token exchange and article creation.
+Read `references/serp-analysis.md` for SERP commands, content parsing, and competitor analysis.
 
-### Step 1: Get a fresh access token
+**Summary:** Pull live top-10 results → parse the top 2-3 ranking articles for structure and word count → check SERP competitors → identify content gaps and featured snippet opportunities.
+
+If the user opted into **AI optimization** at Phase 0, also run the AI analysis steps described in that reference (LLM mentions + AI search volume).
+
+---
+
+## Phase 3: Outline & Structure
+
+Read `references/content-structure.md` for heading hierarchy rules, featured snippet targets, TOC format, internal linking plan, and the outline template.
+
+**Summary:** Build a detailed H1/H2/H3/H4 outline informed by SERP data → include featured snippet targets from People Also Ask → plan internal links using real store URLs → propose meta title, description, and URL handle → present outline to user for approval (unless autonomy level 1).
+
+### Fetching product & collection data for internal links
+
+Use the **Shopify CLI** to fetch product and collection data. The user must have authenticated with `shopify store auth` first (see Prerequisites).
 
 ```bash
-python3 <skill-path>/scripts/shopify.py auth
+# List products (names, handles, URLs)
+shopify store execute --store <store>.myshopify.com --query 'query { products(first: 20) { edges { node { id title handle status featuredMedia { ... on MediaImage { image { url altText } } } } } } }'
+
+# List collections
+shopify store execute --store <store>.myshopify.com --query 'query { collections(first: 20) { edges { node { id title handle } } } }'
 ```
 
-Tokens expire every 24 hours, so always get a fresh one before publishing.
+Use these for all product/collection data throughout the flow (product names, URLs, handles, descriptions, images). They provide real-time store data.
 
-### Step 2: Create the article
+---
 
+## Phase 4: Blog Writing
+
+Read `references/writing-guide.md` for brand voice rules, customer-voice integration, SEO on-page requirements, and output format.
+
+**Summary:** Write 1,500-2,500 words following the approved outline in the brand voice (warm, trustworthy, proof-led). Weave in customer language naturally. Resolve all internal links to real URLs. Optimize for featured snippets with 40-60 word answer blocks.
+
+### Product Preview Blocks
+
+When linking to products in the blog, don't just use plain text hyperlinks — embed visual product preview blocks that show the product image, name, price, and a link. These convert significantly better because readers can see what they're clicking on.
+
+Use the Shopify CLI to fetch product details including images:
 ```bash
-python3 <skill-path>/scripts/shopify.py publish \
-  --token "<access_token>" \
-  --title "<article title>" \
-  --body "<html body>" \
-  --tags "<tag1,tag2,tag3>" \
-  --image-url "<featured image url>" \
-  --published true
+shopify store execute --store <store>.myshopify.com --query 'query ($id: ID!) { product(id: $id) { id title handle descriptionHtml media(first: 10) { nodes { ... on MediaImage { image { url altText } } } } variants(first: 5) { nodes { id title price } } } }' --variables '{"id": "gid://shopify/Product/<id>"}'
 ```
 
-Set `--published false` if the user wants to save as draft first.
+Then render them as HTML blocks in the article body:
 
-### Step 3: Confirm publication
+```html
+<div class="blog-product-card" style="border: 1px solid #e5e5e5; border-radius: 8px; padding: 16px; margin: 24px 0; display: flex; align-items: center; gap: 16px; text-decoration: none;">
+  <img src="<product_image_url>" alt="<product_title>" style="width: 120px; height: 120px; object-fit: cover; border-radius: 6px;" />
+  <div>
+    <h4 style="margin: 0 0 4px 0; font-size: 1.1em;"><a href="/products/<handle>" style="color: inherit; text-decoration: none;">Product Name</a></h4>
+    <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9em;">Short product description or variant info</p>
+    <span style="font-weight: 600;">€XX.XX</span>
+    <a href="/products/<handle>" style="margin-left: 12px; color: #2c6e49; font-weight: 500;">View product →</a>
+  </div>
+</div>
+```
 
-Show the user:
-- Article URL on the store
-- Title and status (published/draft)
-- Offer to make it a draft if they published by accident
+Use 1-2 product preview blocks per article — place them after a relevant section where the product is naturally mentioned. Don't overdo it; the blog should still read as content, not a catalog page. Plain text internal links are still fine for collection pages and other blog posts.
+
+Present complete article with SEO metadata for user approval (unless autonomy level 1).
+
+---
+
+## Phase 5: Image Generation
+
+Generate a featured image using Kie AI:
+
+```
+mcp__kie-ai__kie_generate_image(
+    model="nano-banana-pro",
+    prompt="<detailed prompt based on blog topic and brand aesthetic>",
+    aspect_ratio="16:9",
+    resolution="2K",
+    output_format="jpg"
+)
+```
+
+### Polling — be patient
+
+Image generation can take time. Poll with `mcp__kie-ai__kie_get_task_status(task_id="<id>")` every **30 seconds** (not more frequently — the generation needs time). Allow up to **4 minutes** (8 polls) before deciding it's stuck.
+
+Polling schedule:
+1. Submit generation request → get task_id
+2. Wait 30 seconds → first poll
+3. If not complete, wait another 30 seconds → second poll
+4. Continue every 30 seconds up to 8 polls (4 minutes total)
+5. If still not complete after 8 polls → try fallback model
+6. If fallback also fails after 4 minutes → inform user, offer to skip image or retry manually
+
+Read `references/publishing.md` for image prompt guidelines and fallback models.
+
+Present the image to the user (unless autonomy level 1 or 2). Offer to regenerate if needed.
+
+---
+
+## Phase 6: Publish to Shopify
+
+Read `references/publishing.md` for the full publish flow including SEO metafields.
+
+**The publishing flow uses the Shopify CLI** (`shopify store auth` + `shopify store execute`) for article creation and SEO metafields. No custom scripts or tokens needed.
+
+**Summary:**
+1. Ensure user has run `shopify store auth` (see Prerequisites)
+2. Create article via `shopify store execute --allow-mutations` with the `articleCreate` GraphQL mutation
+3. Set SEO metafields via `shopify store execute --allow-mutations` with the `metafieldsSet` mutation
+4. Confirm with user: show live URL, admin URL, SEO metadata, status
+
+At autonomy levels 1 and 2, always publish as **draft** (`isPublished: false`). At level 3, ask the user whether to publish live or save as draft.
 
 ---
 
 ## Configuration
 
-All configuration is done via environment variables. See `.env.example` for the full list.
+### Prerequisites
 
-### Required Environment Variables
+Before using this skill, the user needs:
 
-| Variable | Description |
-|----------|-------------|
-| `SHOPIFY_STORE` | Your store domain (e.g., `your-store.myshopify.com`) |
-| `SHOPIFY_BLOG_ID` | The blog ID to publish to (find in Shopify admin URL) |
-| `SHOPIFY_CLIENT_ID` | Custom App client ID |
-| `SHOPIFY_CLIENT_SECRET` | Custom App client secret |
-| `DATAFORSEO_LOGIN` | Your DataForSEO login email |
-| `DATAFORSEO_PASSWORD` | Your DataForSEO API password |
+1. **Shopify CLI** installed and authenticated:
+   ```bash
+   shopify store auth --store <your-store>.myshopify.com --scopes write_content,read_content,read_products
+   ```
+   This is a one-time setup. The CLI stores credentials securely.
 
-### Optional Environment Variables
+2. **DataForSEO MCP** connected in Claude Code (handles keyword research, SERP analysis)
+3. **Kie AI MCP** connected in Claude Code (handles image generation)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SHOPIFY_API_VERSION` | `2025-01` | Shopify Admin API version |
-| `DATAFORSEO_AUTH_TOKEN` | — | Pre-encoded Base64 token (alternative to login+password) |
+At the start of the flow, ask the user for their store domain if not already known. Use it in all `shopify store execute` commands.
+
+### Data Access — What to Use When
+
+| Need | Tool | How |
+|------|------|-----|
+| Product names, URLs, images, prices | **Shopify CLI** | `shopify store execute --query '...'` |
+| Collection names, URLs | **Shopify CLI** | `shopify store execute --query '...'` |
+| Blog article creation & publishing | **Shopify CLI** | `shopify store execute --allow-mutations --query '...'` |
+| SEO metafields on articles | **Shopify CLI** | `shopify store execute --allow-mutations --query '...'` |
+| Keyword research | **DataForSEO MCP** | Direct MCP tool calls |
+| SERP analysis | **DataForSEO MCP** | Direct MCP tool calls |
+| AI search data | **DataForSEO MCP** | Direct MCP tool calls |
+| Image generation | **Kie AI MCP** | Direct MCP tool calls |
+
+All tools handle authentication automatically. No API keys, tokens, or custom scripts needed.
+
+### Credentials
+- DataForSEO: Handled by MCP connection · Shopify: Handled by Shopify CLI · Kie AI: Handled by MCP connection
 
 ### Default Market
+- **Location**: "United States" · **Language**: "en"
+- Override per-request: UK = "United Kingdom", Netherlands = "Netherlands" (language_code: "nl"), etc.
 
-- **Location**: United States (code 2840)
-- **Language**: English (code en)
+### API Cost Per Blog Post
+- SEO only: ~$0.07 · SEO + AI: ~$0.18
 
-The user can override these per-request (e.g., "target the Netherlands market" → location 2528, language nl).
+---
 
-### Common Location Codes
+## Reference Files
 
-| Country | Code | Language |
-|---------|------|----------|
-| United States | 2840 | en |
-| United Kingdom | 2826 | en |
-| Netherlands | 2528 | nl |
-| Germany | 2276 | de |
-| France | 2250 | fr |
-| Canada | 2124 | en / fr |
-| Australia | 2036 | en |
+| File | When to read | What's in it |
+|------|-------------|-------------|
+| `references/keyword-research.md` | Phase 1 | DataForSEO MCP tool calls, keyword selection, interpretation |
+| `references/serp-analysis.md` | Phase 2/2b | SERP analysis, content parsing, AI optimization (all via DataForSEO MCP) |
+| `references/content-structure.md` | Phase 3 | Heading hierarchy, snippets, TOC, outline template |
+| `references/writing-guide.md` | Phase 4 | Brand voice, customer-voice, SEO on-page, product preview blocks |
+| `references/publishing.md` | Phase 5-6 | Image gen (polling), Shopify publish, SEO metafields |
 
 ---
 
 ## Error Handling
 
-- **DataForSEO fails**: Check if the API returns status_code != 20000. Show the error to the user.
-- **Shopify token expired**: Re-run `shopify.py auth` to get a fresh token.
-- **Shopify publish fails**: Check the HTTP status and error message. Common issues: missing required fields, HTML validation errors.
-- **Kie AI generation fails**: Retry with a simplified prompt. If persistent, let the user know and offer to publish without an image.
-- **Missing credentials**: The scripts will tell you exactly which environment variables are missing.
-- **Network errors**: Retry once, then inform the user.
+- **DataForSEO MCP fails**: If a DataForSEO MCP tool returns an error, show the error to the user and suggest adjusting the keyword or market. Common issues: invalid location name, keyword too long, or API rate limits.
+- **DataForSEO AI endpoints fail**: The AI optimization tools (`ai_optimization_keyword_data_search_volume`, `ai_opt_llm_ment_search`) can take longer to respond than regular SEO tools. If they time out, retry once. If still failing, skip the AI optimization step and proceed with SEO-only data.
+- **Shopify CLI not authenticated**: Ask the user to run `shopify store auth --store <store>.myshopify.com --scopes write_content,read_content,read_products`
+- **Shopify article creation fails**: Check `userErrors` in the GraphQL response. Common issues: missing required fields, duplicate handle, insufficient scopes.
+- **SEO metafields fail**: Check `userErrors` in the GraphQL response. May need `write_content` scope.
+- **Kie AI image not ready**: Poll every 30 seconds, max 4 minutes. If stuck, try fallback model `flux-2/pro-text-to-image`. If that also fails, inform user.
+- **Content parsing timeout**: Skip URL, try next top result.
+- **Network errors**: Retry once, then inform user.
