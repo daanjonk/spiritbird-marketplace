@@ -1,0 +1,34 @@
+{
+  "name": "spiritbird-marketplace",
+  "owner": {
+    "name": "Daan Jonkman — SpiritBird",
+    "url": "https://spiritbird.ai"
+  },
+  "plugins": [
+    {
+      "name": "shopify-brain",
+      "source": "./plugins/shopify-brain",
+      "description": "Build a personalized AI brain for your Shopify store. Interactive onboarding captures your brand, customer, and strategy — then a daily assistant keeps it alive with check-ins, weekly reviews, experiment tracking, and decision logging."
+    },
+    {
+      "name": "shopify-blog-publisher",
+      "source": "./plugins/shopify-blog-publisher",
+      "description": "End-to-end Shopify blog article publisher. Keyword research (DataForSEO), blog writing, featured image generation (Kie AI), and publishing to Shopify — all in one flow."
+    },
+    {
+      "name": "ai-product-images",
+      "source": "./plugins/ai-product-images",
+      "description": "Generate AI product images (studio shots, UGC-style, model+product) and upload them directly to Shopify products. Powered by Kie AI."
+    },
+    {
+      "name": "dataforseo",
+      "source": "./plugins/dataforseo",
+      "description": "DataForSEO MCP server — real-time access to keyword research, SERP data, backlinks, on-page analysis, and more."
+    },
+    {
+      "name": "kie-ai",
+      "source": "./plugins/kie-ai",
+      "description": "Kie AI MCP server — AI image generation and editing with 20+ models (Nano Banana Pro, Seedream 5, Flux 2 Pro, Imagen 4, and more)."
+    }
+  ]
+}

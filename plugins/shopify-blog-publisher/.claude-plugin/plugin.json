@@ -1,0 +1,26 @@
+{
+  "name": "shopify-blog-publisher",
+  "version": "1.0.0",
+  "description": "End-to-end Shopify blog article publisher. Keyword research, writing, image generation, and publishing — all in one flow.",
+  "author": {
+    "name": "Daan Jonkman — SpiritBird"
+  },
+  "skills": "./skills/",
+  "mcpServers": {
+    "dataforseo": {
+      "command": "npx",
+      "args": ["-y", "dataforseo-mcp-server"],
+      "env": {
+        "DATAFORSEO_USERNAME": "${DATAFORSEO_USERNAME}",
+        "DATAFORSEO_PASSWORD": "${DATAFORSEO_PASSWORD}"
+      }
+    },
+    "kie-ai": {
+      "command": "npx",
+      "args": ["-y", "kie-ai-mcp-server"],
+      "env": {
+        "KIE_AI_API_KEY": "${KIE_AI_API_KEY}"
+      }
+    }
+  }
+}

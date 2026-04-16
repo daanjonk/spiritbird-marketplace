@@ -1,0 +1,9 @@
+{
+  "name": "final-shopify-brain-os",
+  "version": "2.0.0",
+  "description": "Build a personalized AI brain for your Shopify store. Interactive onboarding captures your brand, customer, and strategy — then a daily assistant keeps it alive with check-ins, weekly reviews, experiment tracking, and decision logging.",
+  "author": {
+    "name": "Daan Jonkman — SpiritBird"
+  },
+  "skills": "./skills/"
+}
