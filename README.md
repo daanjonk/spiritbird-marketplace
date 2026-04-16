@@ -1,123 +1,95 @@
 # SpiritBird Marketplace for Claude Code
 
-A curated plugin marketplace for Shopify store owners using Claude Code. One command to add the marketplace, then install the plugins you need.
+Expert Shopify automation plugins for Claude Code. AI-powered blog publishing, product image generation, and store intelligence — all connected to your Shopify store via native CLI.
 
 **Created by [Daan Jonkman — SpiritBird](https://spiritbird.ai)**
 
 ---
 
-## Quick Start
-
-### Step 1: Add the marketplace
+## Installation
 
 ```bash
+# Add marketplace
 /plugin marketplace add daanjonk/spiritbird-marketplace
-```
 
-### Step 2: Install the plugins you want
-
-```bash
-# The AI brain for your Shopify store
+# Install all plugins
 /plugin install shopify-brain@spiritbird-marketplace
-
-# Publish SEO-optimized blog posts to Shopify
 /plugin install shopify-blog-publisher@spiritbird-marketplace
-
-# Generate AI product images for Shopify
 /plugin install ai-product-images@spiritbird-marketplace
-
-# Standalone MCP servers (also bundled with the plugins above)
 /plugin install dataforseo@spiritbird-marketplace
 /plugin install kie-ai@spiritbird-marketplace
 ```
 
-### Step 3: Set your environment variables
-
-The MCP servers need API credentials. Set these in your environment or `.env` file:
-
+Or from your terminal (single copy-paste):
 ```bash
-# DataForSEO (for keyword research & SEO data)
-export DATAFORSEO_USERNAME="your_api_login"
-export DATAFORSEO_PASSWORD="your_api_password"
-# Get credentials at https://dataforseo.com → API Access tab
-
-# Kie AI (for AI image generation)
-export KIE_AI_API_KEY="your_api_key"
-# Get your key at https://kie.ai/api-key
+claude plugin marketplace add daanjonk/spiritbird-marketplace && claude plugin install shopify-brain@spiritbird-marketplace && claude plugin install shopify-blog-publisher@spiritbird-marketplace && claude plugin install ai-product-images@spiritbird-marketplace && claude plugin install dataforseo@spiritbird-marketplace && claude plugin install kie-ai@spiritbird-marketplace
 ```
 
-That's it. You're ready to go.
+## Setup
+
+Connect your Shopify store (one-time):
+```bash
+shopify store auth --store <your-store>.myshopify.com --scopes write_content,read_content,read_products,write_products,write_files
+```
+
+### Required Connections by Plugin
+
+| Plugin | Required | Get Access |
+|--------|----------|------------|
+| **shopify-brain** | Shopify CLI | [Shopify CLI](https://shopify.dev/docs/api/shopify-cli) |
+| **shopify-blog-publisher** | Shopify CLI, DataForSEO MCP, Kie AI MCP | [DataForSEO](https://dataforseo.com), [Kie AI](https://kie.ai/api-key) |
+| **ai-product-images** | Shopify CLI, Kie AI MCP, Cloudinary MCP | [Kie AI](https://kie.ai/api-key), [Cloudinary](https://cloudinary.com) |
+| **dataforseo** | DataForSEO account | [DataForSEO](https://dataforseo.com) |
+| **kie-ai** | Kie AI API key | [Kie AI](https://kie.ai/api-key) |
+
+No custom apps, no API keys in config files, no Python scripts. Everything runs through native Shopify CLI and MCP connections.
 
 ---
 
-## What's Included
+## Available Plugins
 
-### Plugins (Skills)
+### Shopify Brain (2 skills)
+| Skill | Triggers | Purpose |
+|-------|----------|---------|
+| Setup | "build my vault", "setup" | Interactive onboarding — captures brand, customer, strategy into a structured vault |
+| Assistant | "check in", "weekly review" | Daily driver — check-ins, experiment tracking, decision logging |
 
-| Plugin | What it does | Triggers |
-|--------|-------------|----------|
-| **shopify-brain** | Builds a personalized AI brain for your store. Interactive onboarding captures your brand, customer, and strategy. A daily assistant keeps it alive with check-ins, weekly reviews, and decision logging. | "setup", "build my vault", "check in", "weekly review" |
-| **shopify-blog-publisher** | End-to-end blog publishing: keyword research (DataForSEO) → writing → image generation (Kie AI) → publish to Shopify. One flow. | "publish a blog", "new blog post", "write an article" |
-| **ai-product-images** | Generate studio-style, UGC, or model+product AI images and upload them directly to your Shopify products. | "generate product images", "create product photos" |
+### Blog Publisher (1 skill, 6 phases)
+| Phase | What it does |
+|-------|-------------|
+| Ideation | Get topic, set goal, choose autonomy level |
+| Keyword Research | DataForSEO MCP — suggestions, difficulty, intent |
+| SERP Analysis | Competitive content analysis + AI optimization |
+| Outline | SEO-optimized heading structure with snippet targets |
+| Writing | 1,500-2,500 word brand-aligned article |
+| Image + Publish | Kie AI featured image → publish via Shopify CLI |
+
+### AI Product Images (1 skill, 4 modes)
+| Mode | Best for |
+|------|----------|
+| Mode A — Model + Product | Wearable products with model reference photos |
+| Mode B — Image-to-image | Non-wearable products, background swap |
+| Mode C — Text-to-image | New products with no existing photo (fallback) |
+| Mode D — UGC Style | Social media, mirror selfies, lifestyle content |
 
 ### MCP Servers
-
-| Server | What it provides | Required by |
-|--------|-----------------|-------------|
-| **dataforseo** | Real-time keyword research, SERP data, backlinks, on-page analysis, content analysis, and more. | shopify-blog-publisher |
-| **kie-ai** | AI image generation and editing with 20+ models (Nano Banana Pro, Seedream 5 Lite, Flux 2 Pro, Imagen 4, Ideogram V3, etc.) | shopify-blog-publisher, ai-product-images |
-
-MCP servers are auto-configured when you install a plugin that needs them. You can also install them standalone if you just want the raw MCP tools.
-
----
-
-## Prerequisites
-
-- [Claude Code](https://claude.ai/code) installed
-- [Node.js](https://nodejs.org/) v18+ (for MCP servers via npx)
-- A Shopify store (for the Shopify plugins)
-- API credentials for the services you want to use (see Step 3 above)
-
----
-
-## Plugin Details
-
-### Shopify Brain
-
-Two skills:
-- **Setup** — One-time interactive onboarding. Builds an Obsidian-style vault with your brand voice, ICP, channels, competitors, and strategy. Three tiers: Foundation (5 min), Growth (12 min), Full Brain (18 min).
-- **Assistant** — Daily driver. Check-ins, weekly reviews, experiment tracking, decision logging. Automatically loads your vault context every session.
-
-### Shopify Blog Publisher
-
-One skill, four phases:
-1. **Keyword Research** — Uses DataForSEO to find the right topic and keywords
-2. **Blog Writing** — Writes an SEO-optimized article
-3. **Image Generation** — Creates a featured image via Kie AI
-4. **Publish** — Pushes the article live on your Shopify store
-
-Requires: Shopify Custom App with `write_content` scope, DataForSEO account, Kie AI API key.
-
-### AI Product Images
-
-One skill, four modes:
-- **Mode A** — Model + Product (best quality, needs model reference photos)
-- **Mode B** — Image-to-image (recreates existing product photos on white background)
-- **Mode C** — Text-to-image (generates from product description only)
-- **Mode D** — UGC Style (mirror selfies, lifestyle shots)
-
-Requires: Shopify Custom App with `read_products`, `write_products`, `write_files` scopes, Kie AI API key.
+| Plugin | What it provides |
+|--------|-----------------|
+| **dataforseo** | Keyword research, SERP data, backlinks, on-page analysis |
+| **kie-ai** | AI image generation with 20+ models (Nano Banana Pro, Seedream 5, Flux 2, Imagen 4, etc.) |
+/plugin install kie-ai@spiritbird-marketplace
+```
 
 ---
 
 ## Updating
 
-To get the latest versions:
-
 ```bash
 /plugin update shopify-brain@spiritbird-marketplace
 /plugin update shopify-blog-publisher@spiritbird-marketplace
 /plugin update ai-product-images@spiritbird-marketplace
+/plugin update dataforseo@spiritbird-marketplace
+/plugin update kie-ai@spiritbird-marketplace
 ```
 
 ---
