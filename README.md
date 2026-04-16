@@ -25,24 +25,34 @@ Or from your terminal (single copy-paste):
 claude plugin marketplace add daanjonk/spiritbird-marketplace && claude plugin install shopify-brain@spiritbird-marketplace && claude plugin install shopify-blog-publisher@spiritbird-marketplace && claude plugin install ai-product-images@spiritbird-marketplace && claude plugin install dataforseo@spiritbird-marketplace && claude plugin install kie-ai@spiritbird-marketplace
 ```
 
-## Setup
+---
 
-Connect your Shopify store (one-time):
-```bash
-shopify store auth --store <your-store>.myshopify.com --scopes write_content,read_content,read_products,write_products,write_files
+## Setup — After Installing
+
+Copy this prompt into Claude Code and fill in your details:
+
+```
+Set up my SpiritBird marketplace. Here are my credentials:
+
+1. Shopify store: YOUR-STORE.myshopify.com
+2. DataForSEO login: YOUR-EMAIL
+3. DataForSEO password: YOUR-API-PASSWORD
+4. Kie AI API key: YOUR-API-KEY
+
+Connect everything and tell me when you're done so I can spin up a new Claude session to verify it's working.
 ```
 
-### Required Connections by Plugin
+Claude will connect your Shopify store, set up the MCP servers, and confirm when everything is ready. You'll need to start a new Claude session after setup for the MCP connections to take effect.
 
-| Plugin | Required | Get Access |
-|--------|----------|------------|
-| **shopify-brain** | Shopify CLI | [Shopify CLI](https://shopify.dev/docs/api/shopify-cli) |
-| **shopify-blog-publisher** | Shopify CLI, DataForSEO MCP, Kie AI MCP | [DataForSEO](https://dataforseo.com), [Kie AI](https://kie.ai/api-key) |
-| **ai-product-images** | Shopify CLI, Kie AI MCP, Cloudinary MCP | [Kie AI](https://kie.ai/api-key), [Cloudinary](https://cloudinary.com) |
-| **dataforseo** | DataForSEO account | [DataForSEO](https://dataforseo.com) |
-| **kie-ai** | Kie AI API key | [Kie AI](https://kie.ai/api-key) |
+**Where to get your credentials:**
 
-No custom apps, no API keys in config files, no Python scripts. Everything runs through native Shopify CLI and MCP connections.
+| Credential | Where to get it |
+|-----------|----------------|
+| Shopify store domain | Your store URL (e.g. `my-brand.myshopify.com`) |
+| DataForSEO login + password | [dataforseo.com](https://dataforseo.com) → Dashboard → API Access |
+| Kie AI API key | [kie.ai/api-key](https://kie.ai/api-key) |
+
+No technical setup needed — just provide your credentials and Claude handles the rest.
 
 ---
 
@@ -77,8 +87,18 @@ No custom apps, no API keys in config files, no Python scripts. Everything runs 
 |--------|-----------------|
 | **dataforseo** | Keyword research, SERP data, backlinks, on-page analysis |
 | **kie-ai** | AI image generation with 20+ models (Nano Banana Pro, Seedream 5, Flux 2, Imagen 4, etc.) |
-/plugin install kie-ai@spiritbird-marketplace
-```
+
+---
+
+## Required Connections by Plugin
+
+| Plugin | Required | Get Access |
+|--------|----------|------------|
+| **shopify-brain** | Shopify CLI | [Shopify CLI](https://shopify.dev/docs/api/shopify-cli) |
+| **shopify-blog-publisher** | Shopify CLI, DataForSEO MCP, Kie AI MCP | [DataForSEO](https://dataforseo.com), [Kie AI](https://kie.ai/api-key) |
+| **ai-product-images** | Shopify CLI, Kie AI MCP, Cloudinary MCP | [Kie AI](https://kie.ai/api-key), [Cloudinary](https://cloudinary.com) |
+| **dataforseo** | DataForSEO account | [DataForSEO](https://dataforseo.com) |
+| **kie-ai** | Kie AI API key | [Kie AI](https://kie.ai/api-key) |
 
 ---
 
