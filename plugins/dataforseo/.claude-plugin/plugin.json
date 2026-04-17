@@ -1,17 +1,27 @@
 {
   "name": "dataforseo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DataForSEO MCP server — real-time keyword research, SERP data, backlinks, on-page analysis, and more.",
   "author": {
     "name": "Daan Jonkman — SpiritBird"
+  },
+  "userConfig": {
+    "dataforseo_username": {
+      "description": "DataForSEO account email (the login you use at dataforseo.com). Stored securely in your system keychain.",
+      "sensitive": true
+    },
+    "dataforseo_password": {
+      "description": "DataForSEO API password (from the API Access tab in your DataForSEO dashboard). Stored securely in your system keychain.",
+      "sensitive": true
+    }
   },
   "mcpServers": {
     "dataforseo": {
       "command": "npx",
       "args": ["-y", "dataforseo-mcp-server"],
       "env": {
-        "DATAFORSEO_USERNAME": "${DATAFORSEO_USERNAME}",
-        "DATAFORSEO_PASSWORD": "${DATAFORSEO_PASSWORD}"
+        "DATAFORSEO_USERNAME": "${user_config.dataforseo_username}",
+        "DATAFORSEO_PASSWORD": "${user_config.dataforseo_password}"
       }
     }
   }
