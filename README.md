@@ -29,30 +29,22 @@ claude plugin marketplace add daanjonk/spiritbird-marketplace && claude plugin i
 
 ## Setup — After Installing
 
-Copy this prompt into Claude Code and fill in your details:
+When you install `dataforseo` and `kie-ai`, Claude Code prompts you for the credentials it needs and stores them securely in your system keychain. No manual file edits, no environment variables to export.
 
+**You will be asked for:**
+
+| Plugin | What you'll paste | Where to get it |
+|--------|-------------------|----------------|
+| `dataforseo` | DataForSEO login email + API password | [dataforseo.com](https://dataforseo.com) → Dashboard → API Access |
+| `kie-ai` | Kie AI API key | [kie.ai/api-key](https://kie.ai/api-key) |
+
+**For the Shopify-connected plugins** (`shopify-brain`, `shopify-blog-publisher`, `ai-product-images`), authenticate your store once with the Shopify CLI:
+
+```bash
+shopify store auth --store YOUR-STORE.myshopify.com --scopes read_products,write_products,read_reports,write_files
 ```
-Set up my SpiritBird marketplace. Here are my credentials:
 
-1. Shopify store: YOUR-STORE.myshopify.com
-2. DataForSEO login: YOUR-EMAIL
-3. DataForSEO password: YOUR-API-PASSWORD
-4. Kie AI API key: YOUR-API-KEY
-
-Connect everything and tell me when you're done so I can spin up a new Claude session to verify it's working.
-```
-
-Claude will connect your Shopify store, set up the MCP servers, and confirm when everything is ready. You'll need to start a new Claude session after setup for the MCP connections to take effect.
-
-**Where to get your credentials:**
-
-| Credential | Where to get it |
-|-----------|----------------|
-| Shopify store domain | Your store URL (e.g. `my-brand.myshopify.com`) |
-| DataForSEO login + password | [dataforseo.com](https://dataforseo.com) → Dashboard → API Access |
-| Kie AI API key | [kie.ai/api-key](https://kie.ai/api-key) |
-
-No technical setup needed — just provide your credentials and Claude handles the rest.
+Start a new Claude session after install so the MCP connections initialize with the credentials you just provided.
 
 ---
 
