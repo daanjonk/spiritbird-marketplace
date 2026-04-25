@@ -16,13 +16,20 @@ Expert Shopify automation plugins for Claude Code. AI-powered blog publishing, p
 /plugin install shopify-brain@spiritbird-marketplace
 /plugin install shopify-blog-publisher@spiritbird-marketplace
 /plugin install ai-product-images@spiritbird-marketplace
+/plugin install brand-ads-generate@spiritbird-marketplace
 /plugin install dataforseo@spiritbird-marketplace
 /plugin install kie-ai@spiritbird-marketplace
 ```
 
 Or from your terminal (single copy-paste):
 ```bash
-claude plugin marketplace add daanjonk/spiritbird-marketplace && claude plugin install shopify-brain@spiritbird-marketplace && claude plugin install shopify-blog-publisher@spiritbird-marketplace && claude plugin install ai-product-images@spiritbird-marketplace && claude plugin install dataforseo@spiritbird-marketplace && claude plugin install kie-ai@spiritbird-marketplace
+claude plugin marketplace add daanjonk/spiritbird-marketplace && claude plugin install shopify-brain@spiritbird-marketplace && claude plugin install shopify-blog-publisher@spiritbird-marketplace && claude plugin install ai-product-images@spiritbird-marketplace && claude plugin install brand-ads-generate@spiritbird-marketplace && claude plugin install dataforseo@spiritbird-marketplace && claude plugin install kie-ai@spiritbird-marketplace
+```
+
+**Already have the marketplace?** Just pull the new plugin:
+```bash
+/plugin marketplace update spiritbird-marketplace
+/plugin install brand-ads-generate@spiritbird-marketplace
 ```
 
 ---
@@ -74,6 +81,15 @@ Start a new Claude session after install so the MCP connections initialize with 
 | Mode C — Text-to-image | New products with no existing photo (fallback) |
 | Mode D — UGC Style | Social media, mirror selfies, lifestyle content |
 
+### Brand Ads Generate (1 skill, brand-agnostic)
+| Step | What it does |
+|------|-------------|
+| Onboarding | First run with no `Brand/` vault: 7 conversational questions about your brand → writes a complete brand vault to disk |
+| Source picker | Choose reference + lifestyle anchor images from your hosted-URL ledger |
+| CTA mode | Auto-generate variants from your customer-voice + ad-playbook tiers, or supply your own |
+| Render | Kie AI image-to-image with brand-context prompt + on-image CTA + visual-identity guardrails |
+| BRIEF | Per-run `BRIEF.md` logging every variant for the next test cycle |
+
 ### MCP Servers
 | Plugin | What it provides |
 |--------|-----------------|
@@ -89,6 +105,7 @@ Start a new Claude session after install so the MCP connections initialize with 
 | **shopify-brain** | Shopify CLI | [Shopify CLI](https://shopify.dev/docs/api/shopify-cli) |
 | **shopify-blog-publisher** | Shopify CLI, DataForSEO MCP, Kie AI MCP | [DataForSEO](https://dataforseo.com), [Kie AI](https://kie.ai/api-key) |
 | **ai-product-images** | Shopify CLI, Kie AI MCP | [Kie AI](https://kie.ai/api-key) |
+| **brand-ads-generate** | Kie AI MCP, any image-hosting (Shopify Files, Cloudinary, S3, etc.) | [Kie AI](https://kie.ai/api-key) |
 | **dataforseo** | DataForSEO account | [DataForSEO](https://dataforseo.com) |
 | **kie-ai** | Kie AI API key | [Kie AI](https://kie.ai/api-key) |
 
@@ -100,6 +117,7 @@ Start a new Claude session after install so the MCP connections initialize with 
 /plugin update shopify-brain@spiritbird-marketplace
 /plugin update shopify-blog-publisher@spiritbird-marketplace
 /plugin update ai-product-images@spiritbird-marketplace
+/plugin update brand-ads-generate@spiritbird-marketplace
 /plugin update dataforseo@spiritbird-marketplace
 /plugin update kie-ai@spiritbird-marketplace
 ```

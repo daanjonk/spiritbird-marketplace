@@ -1,0 +1,9 @@
+{
+  "name": "brand-ads-generate",
+  "version": "1.0.0",
+  "description": "Generate on-brand paid-ad creative variations from your brand context plus cross-industry inspiration, with on-image CTA text rendered inline by an image-to-image model. Brand-agnostic — onboards new users via 7 conversational questions on first run, then reads voice/visual/playbook context from a workspace-local Brand/ vault. Pairs with the kie-ai plugin from this marketplace.",
+  "author": {
+    "name": "Daan Jonkman — SpiritBird"
+  },
+  "skills": "./skills/"
+}

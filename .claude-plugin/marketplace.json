@@ -21,6 +21,11 @@
       "description": "Generate AI product images (studio shots, UGC-style, model+product) and upload them directly to Shopify products. Powered by Kie AI."
     },
     {
+      "name": "brand-ads-generate",
+      "source": "./plugins/brand-ads-generate",
+      "description": "Generate on-brand paid-ad creative variations from your brand context plus cross-industry inspiration, with on-image CTA text rendered inline. Brand-agnostic — onboards new users via 7 conversational questions on first run, then reads voice/visual/playbook context from a workspace-local Brand/ vault. Pairs with the kie-ai plugin."
+    },
+    {
       "name": "dataforseo",
       "source": "./plugins/dataforseo",
       "description": "DataForSEO MCP server — real-time access to keyword research, SERP data, backlinks, on-page analysis, and more."

@@ -1,0 +1,85 @@
+# CLAUDE.md — Brand vault routing index
+
+> Master routing index for this brand workspace. Any AI agent (Claude Code, an SDK script, etc.) reads this file first, decides what to load based on the task, and pulls only those files into context.
+
+**Brand:** `<!-- TODO: name + one-liner — e.g. "Fox · athletic apparel for the gym-as-identity generation, ages 18–35" -->`
+**Visual signature:** `<!-- TODO: 1-line — e.g. "Black + white core, light-blue accent as the differentiator" -->`
+
+---
+
+## Folder hierarchy
+
+```
+<workspace>/
+├── CLAUDE.md                 ← you are here (master nav)
+├── Brand/                    ← who you are (voice, customer, visuals, guardrails)
+│   ├── tone-of-voice.md
+│   ├── customer-voice.md         ★ highest-leverage file
+│   ├── visual-identity.md        ★ accent rules
+│   ├── guardrails.md             ★ non-negotiable rules
+│   ├── ad-playbook.md            ★ CTA tiers + the "good ad" rule
+│   ├── icp.md
+│   └── positioning.md
+├── Images/                   ← reference images + hosted-URL ledger
+│   ├── CLAUDE.md
+│   ├── hosted-urls.md            (single source of truth: local → CDN URL)
+│   ├── reference-pack/           (your brand anchor images)
+│   ├── Creative ideas/           (cross-industry inspiration)
+│   └── ads/                      (run outputs from brand-ads-generate)
+└── (your other project files)
+```
+
+★ = always-load files for almost any creative task.
+
+---
+
+## "Create me X" → files to load
+
+| If the user asks for… | Primary files (load first, in order) | Supporting (only if needed) |
+|---|---|---|
+| **Static ad / paid creative** (the `brand-ads-generate` skill auto-loads these) | `Brand/ad-playbook.md` → `Brand/customer-voice.md` → `Brand/guardrails.md` → `Brand/visual-identity.md` | `Brand/icp.md`, `Brand/tone-of-voice.md` |
+| **Product description** (PDP, new SKU) | `Brand/tone-of-voice.md` → `Brand/customer-voice.md` → `Brand/visual-identity.md` | `Brand/icp.md`, `Brand/positioning.md` |
+| **Email** (Klaviyo flow, broadcast) | `Brand/tone-of-voice.md` → `Brand/customer-voice.md` → `Brand/icp.md` | `Brand/ad-playbook.md` (for hooks library) |
+| **Blog post / SEO article** | `Brand/tone-of-voice.md` → `Brand/customer-voice.md` → `Brand/icp.md` | `Brand/positioning.md` |
+| **Landing / About / Brand page** | `Brand/positioning.md` → `Brand/tone-of-voice.md` → `Brand/visual-identity.md` | `Brand/customer-voice.md` |
+| **Visual / packaging / design brief** | `Brand/visual-identity.md` → `Brand/guardrails.md` | — |
+
+> **Verbatim rule:** when `customer-voice.md` has a real quote that fits, **steal the language word-for-word**. Don't paraphrase real customer voice — that's where conversion comes from.
+
+---
+
+## File-by-file index
+
+- **`Brand/tone-of-voice.md`** — voice in one sentence, brands you admire, writing guidelines. Load for every piece of copy.
+- **`Brand/icp.md`** — ideal customer profile. Used for targeting, empathy, framing.
+- **`Brand/customer-voice.md`** ★ — verbatim language from real customers (reviews, Reddit, comments, support). Highest-leverage file in the vault.
+- **`Brand/positioning.md`** — competitive alternatives, differentiated attributes, positioning statement.
+- **`Brand/guardrails.md`** ★ — numbered "never do" rules with *why* + *how to apply*. Tiebreaker file when a decision feels close to a brand line.
+- **`Brand/visual-identity.md`** ★ — color system (with accent rules), typography, logo, photography mood. Required for any visual brief.
+- **`Brand/ad-playbook.md`** — CTA tiers (Soft / Moderate / Direct), words-to-use, words-to-avoid, the "good ad" rule.
+
+---
+
+## Decision flow for any "create me X" request
+
+1. **Identify the artifact** the user wants (PDP copy, ad, email, blog, brief, etc.).
+2. **Find the matching row** in the routing table above.
+3. **Load Primary files in the order listed.** This order is intentional — voice first, then customer language, then specifics.
+4. **Pull `customer-voice.md` verbatim** wherever a real quote fits the moment. Don't paraphrase real voice.
+5. **Pressure-test the draft against `guardrails.md`** before returning it. If any rule is being bent, fix the draft, not the rule.
+6. **Return the artifact.** No hedging, no marketing-speak.
+
+If the request doesn't fit any row: load `tone-of-voice.md` + `customer-voice.md` + `guardrails.md` as a baseline and ask one clarifying question.
+
+---
+
+## Update protocol
+
+When this vault gains a new file:
+1. Add it to the **Folder hierarchy** tree.
+2. Add a row to the **routing table** (or extend an existing row).
+3. Add a one-line entry to the **file-by-file index**.
+4. If it's a non-negotiable rule, also mirror it into `Brand/guardrails.md`.
+5. Keep this file under ~250 lines — it's loaded into every session.
+
+*Generated by [brand-ads-generate](https://github.com/daanjonk/brand-ads-generate). Edit freely.*
